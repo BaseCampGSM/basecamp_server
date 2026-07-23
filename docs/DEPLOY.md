@@ -25,7 +25,8 @@
 ```
 
 - 빌드는 GitHub Actions, **EC2 는 완성 이미지 실행만** → 1GB 프리티어도 OK.
-- 현재 `develop`은 빈 스켈레톤이지만, 이 절차로 파이프라인·인프라를 먼저 완성해두면 이후 실제 코드 push 시 자동 배포된다.
+- DB 는 **Supabase(관리형 PostgreSQL)** 를 쓴다. EC2 에 별도 DB 컨테이너를 띄우지 않는다.
+- AI 분석은 Spring 백엔드가 **Claude API를 직접 호출**한다(팀원의 별도 FastAPI 서비스를 거치지 않음).
 
 ---
 
@@ -72,6 +73,31 @@ exit   # docker 그룹 적용 위해 재접속
 ```
 > AWS CLI 는 설치할 필요 없다(ECR 안 씀). EC2 의 GHCR 로그인은 Actions 가 배포 시 임시 토큰으로 처리한다.
 
+## Phase 2.5 — EC2에 실제 시크릿(.env) 만들기 (⚠️ 본인이 직접, 한 번만)
+
+앱이 실제로 필요로 하는 자격증명(Supabase DB, Google OAuth, Claude API, 공공데이터/카카오 키)은
+**git 이나 GitHub Secrets 가 아니라 EC2 안의 `.env` 파일**에만 존재해야 한다.
+(누가 대신 만들어줄 수 없는 단계 — 실제 비밀번호/키가 들어가기 때문)
+
+```bash
+ssh -i basecamp-key.pem ubuntu@<EC2 퍼블릭 IP>
+cd /home/ubuntu/basecamp
+nano .env
+```
+저장소의 [.env.example](../.env.example) 에 있는 키 이름 그대로, **실제 값**을 채워 저장(`Ctrl+O`, `Ctrl+X`):
+```
+SUPABASE_DB_HOST=...
+SUPABASE_DB_USER=...
+SUPABASE_DB_PASSWORD=...
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+ANTHROPIC_API_KEY=...
+PUBLIC_DATA_API_KEY=...
+LOCAL_DATA_API_KEY=...
+KAKAO_REST_API_KEY=...
+```
+값들은 Supabase 콘솔(Project Settings → Database), Google Cloud Console(OAuth 클라이언트), Anthropic 콘솔, 공공데이터포털/카카오 디벨로퍼스에서 각각 발급받은 실제 값. 이 값들을 아는 팀원(백엔드/AI 담당)에게 전달받아 채운다.
+
 ## Phase 3 — GitHub 저장소 시크릿 등록 (3개뿐)
 
 **저장소 → Settings → Secrets and variables → Actions → New repository secret**
@@ -92,19 +118,17 @@ git push origin develop
 - 저장소 **Actions 탭** → `CI/CD` 워크플로 로그 (test → deploy 순서)
 - 첫 배포 후 **GHCR 패키지**가 저장소 우측 *Packages* 에 생성됨(비공개, 정상)
 - 브라우저에서 **`http://<EC2 퍼블릭 IP>:8080`** 접속
-- 현재는 빈 스켈레톤 + Spring Security 라 **401/로그인 화면이 뜨면 정상 기동**
+- Google 로그인 화면/리다이렉트가 뜨면 정상 기동. `/api/v1/...` 호출 시 CORS 는 `http://localhost:3000` 프론트 기준으로 이미 설정돼 있음.
 
 이후 팀원이 `develop`에 머지할 때마다 자동 배포된다.
 
 ---
 
-## 2단계: 실제 코드 + MySQL 연결 (진짜 백엔드 코드가 오면)
+## CI 테스트는 실제 DB 없이 돈다 (H2)
 
-1. `application.properties`의 `spring.autoconfigure.exclude=...` **삭제** (DB 자동설정 다시 켬)
-2. **MySQL 준비**: `docker-compose.yml`의 `mysql` 블록 주석 해제(EC2 컨테이너로 가장 저렴). RDS 는 이 교육 계정에선 막혀 있을 수 있으니 컨테이너 방식 권장.
-3. `docker-compose.yml`의 `SPRING_DATASOURCE_*` env 주석 해제 + 값 설정
-4. 시크릿(Google OAuth, Kakao 키 등)은 EC2 env / compose 로 주입, **코드 하드코딩 금지**
-5. CI 테스트도 DB 필요 → `deploy.yml` 의 `test` 잡에 MySQL 서비스 컨테이너 추가
+`application.yml`은 Supabase(Postgres) 접속 정보를 요구하는데, GitHub Actions 러너에는 그 값이 없다.
+그래서 [src/test/resources/application.yml](../src/test/resources/application.yml) 로 **테스트 실행 시에만** H2 인메모리 DB + 더미 값으로 오버라이드해 컨텍스트가 뜨도록 했다.
+실제 프로덕션 설정(`src/main/resources/application.yml`)은 건드리지 않으며, Supabase 자격증명을 CI 에 넣을 필요가 없다.
 
 ## 트러블슈팅
 
@@ -112,9 +136,12 @@ git push origin develop
 - **GHCR 이름 오류**: 이미지 경로는 **소문자만** 허용 (`ghcr.io/basecampgsm/basecamp_server`).
 - **SSH timeout**: 보안그룹 22 인바운드, `EC2_HOST`, `EC2_SSH_KEY`(전체 내용) 확인.
 - **컨테이너 OOM**: swap 설정 확인. 힙은 Dockerfile `JAVA_OPTS`(MaxRAMPercentage)로 제한 중.
-- **test 잡 DataSource 실패**: 스켈레톤 단계에선 `application.properties` 자동설정 제외 유지 필수 (Boot 4 경로: `org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration`).
+- **컨테이너가 뜨자마자 죽음(Supabase 연결 실패 등)**: EC2 의 `.env` 값 확인(Phase 2.5). `docker logs basecamp-server` 로 원인 확인.
+- **test 잡 DataSource 실패**: `src/test/resources/application.yml` 이 존재하는지, H2 의존성(`build.gradle`의 `com.h2database:h2`)이 유지되는지 확인.
 
 ## 참고 파일
 - 파이프라인: [.github/workflows/deploy.yml](../.github/workflows/deploy.yml)
 - 이미지 빌드: [Dockerfile](../Dockerfile)
 - 실행 정의: [docker-compose.yml](../docker-compose.yml)
+- EC2 `.env` 템플릿(이름만, 값 없음): [.env.example](../.env.example)
+- 테스트 전용 설정(H2): [src/test/resources/application.yml](../src/test/resources/application.yml)
