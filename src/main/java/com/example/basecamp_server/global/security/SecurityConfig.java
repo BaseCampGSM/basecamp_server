@@ -18,6 +18,10 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final OAuth2FailureHandler oAuth2FailureHandler;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -25,9 +29,15 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
 
-                // ... 기존 oauth2Login, authorizeHttpRequests 설정들 ...
+                // 구글 로그인 처리 (/oauth2/authorization/google 시작 -> 콜백 -> 세션 발급)
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+                        .successHandler(oAuth2SuccessHandler)
+                        .failureHandler(oAuth2FailureHandler)
+                )
+
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/**", "/oauth2/**", "/login/**").permitAll()
+                        .requestMatchers("/", "/api/v1/**", "/oauth2/**", "/login/**").permitAll()
                         .anyRequest().authenticated()
                 );
 
