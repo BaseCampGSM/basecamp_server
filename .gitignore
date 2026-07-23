@@ -35,8 +35,3 @@ out/
 
 ### VS Code ###
 .vscode/
-
-### 실제 시크릿 (EC2 등 배포 서버에만 존재, 절대 커밋 금지) ###
-.env
-.env.*
-!.env.example
