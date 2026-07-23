@@ -1,0 +1,10 @@
+# 빌드에 불필요한 파일 제외 (이미지 컨텍스트 최소화)
+.git
+.github
+.gradle
+build/
+docs/
+*.md
+.idea
+.vscode
+HELP.md

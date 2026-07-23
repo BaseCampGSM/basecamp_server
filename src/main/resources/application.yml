@@ -1,9 +1,6 @@
 server:
-  servlet:
-    session:
-      cookie:
-        same-site: "Lax"
-        secure: false
+  port: 4000
+  address: 0.0.0.0
 
 spring:
   datasource:
@@ -30,6 +27,7 @@ spring:
             scope:
               - profile
               - email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
 
 servlet:
   session:

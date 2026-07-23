@@ -1,0 +1,42 @@
+# 테스트 전용 설정. src/test/resources 는 테스트 실행 시 클래스패스 우선순위가
+# src/main/resources 보다 앞서므로, 테스트 중에는 이 파일이 application.yml 을 대체한다.
+#
+# 목적: CI(GitHub Actions)와 로컬에 실제 Supabase/Google OAuth 자격증명이 없어도
+# contextLoads() 등 컨텍스트 로딩 테스트가 통과하도록, DB 는 H2 인메모리로,
+# 외부 연동 값은 더미로 채운다. (실제 Supabase/시크릿 값은 절대 여기 넣지 않음)
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-client-id
+            client-secret: test-client-secret
+            scope:
+              - profile
+              - email
+
+api:
+  anthropic:
+    key: test-key
+  public-data:
+    key: test-key
+  local-data:
+    key: test-key
+  kakao:
+    key: test-key
