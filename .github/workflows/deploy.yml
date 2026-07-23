@@ -1,0 +1,99 @@
+name: CI/CD
+
+# 언제 실행되나:
+#  - develop / main 으로 향하는 PR → 빌드+테스트만 (머지 전 검증)
+#  - develop 에 push            → 빌드+테스트 후 이미지 빌드 → GHCR push → EC2 배포
+#
+# ※ 교육용 AWS 계정이라 ECR/IAM 을 못 만들어, 이미지 저장소는 GitHub 자체(GHCR)를 쓴다.
+#   AWS 자격증명은 전혀 필요 없고, EC2 접속 정보(시크릿 3개)만 있으면 된다.
+on:
+  push:
+    branches: [ develop, main ]
+  pull_request:
+    branches: [ develop, main ]
+
+# GHCR 이미지 경로 (GHCR 은 소문자만 허용 → 조직/repo 소문자로 고정)
+env:
+  IMAGE_NAME: ghcr.io/basecampgsm/basecamp_server
+
+jobs:
+  # ── CI: 컴파일 + 테스트 (JDK 21) ──────────────────────
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build & Test
+        run: ./gradlew build --no-daemon
+
+  # ── CD: 이미지 빌드 → GHCR push → EC2 배포 (develop push 만) ──
+  deploy:
+    name: Build image & Deploy to EC2
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write          # GHCR 에 이미지 push 권한
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # GHCR 로그인 (별도 계정/키 불필요 — GITHUB_TOKEN 사용)
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      # compose 파일을 EC2 로 복사 (최신 정의 반영)
+      - name: Copy docker-compose.yml to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: docker-compose.yml
+          target: /home/${{ secrets.EC2_USER }}/basecamp
+
+      # EC2 에서 GHCR 로그인(임시 GITHUB_TOKEN) 후 최신 이미지로 재기동
+      - name: Deploy on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: GH_TOKEN,GH_ACTOR,APP_IMAGE
+          script: |
+            set -e
+            echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_ACTOR" --password-stdin
+            mkdir -p ~/basecamp && cd ~/basecamp
+            docker compose pull
+            docker compose up -d
+            docker image prune -f
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_ACTOR: ${{ github.actor }}
+          APP_IMAGE: ${{ env.IMAGE_NAME }}:${{ github.sha }}
