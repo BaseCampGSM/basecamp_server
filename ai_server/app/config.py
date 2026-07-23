@@ -17,19 +17,10 @@ class Settings:
     AWS_ACCESS_KEY_ID: str = os.getenv("AWS_ACCESS_KEY_ID", "")
     AWS_SECRET_ACCESS_KEY: str = os.getenv("AWS_SECRET_ACCESS_KEY", "")
 
-    # Bedrock 모델 ID
-    BEDROCK_EMBEDDING_MODEL_ID: str = os.getenv(
-        "BEDROCK_EMBEDDING_MODEL_ID", "amazon.titan-embed-text-v2:0"
-    )
+    # Bedrock LLM 모델 ID
     BEDROCK_LLM_MODEL_ID: str = os.getenv(
         "BEDROCK_LLM_MODEL_ID", "anthropic.claude-3-haiku-20240307-v1:0"
     )
-
-    # RAG 설정
-    DOCS_DIR: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "docs")
-    CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "500"))
-    CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "50"))
-    TOP_K_RESULTS: int = int(os.getenv("TOP_K_RESULTS", "3"))
 
     # 서버 설정
     HOST: str = os.getenv("HOST", "0.0.0.0")
