@@ -1,0 +1,48 @@
+# EC2 에서 실행되는 컨테이너 정의.
+# GitHub Actions 가 이 파일을 EC2 로 복사하고, APP_IMAGE(GHCR 이미지)를 주입해 실행한다.
+#   export APP_IMAGE=ghcr.io/basecampgsm/basecamp_server:<sha>
+#   docker compose pull && docker compose up -d
+# (교육용 AWS 계정이라 ECR 을 못 만들어 GitHub 자체 저장소 GHCR 을 사용)
+
+services:
+  basecamp-server:
+    image: ${APP_IMAGE:-ghcr.io/basecampgsm/basecamp_server:latest}
+    container_name: basecamp-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      # AI 서비스(FastAPI) 주소. 같은 compose 에 올리면 http://fastapi-ai:8000
+      - AI_SERVICE_URL=${AI_SERVICE_URL:-http://localhost:8000}
+      # ── [2단계] DB 연결 시 주석 해제 ──
+      # - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/basecamp
+      # - SPRING_DATASOURCE_USERNAME=basecamp
+      # - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+    # 헬스체크는 Actuator(spring-boot-starter-actuator) 추가 후
+    # test: ["CMD","curl","-fsS","http://localhost:8080/actuator/health"] 로 켤 것.
+    # (현재는 Security 로 / 가 401 이고 이미지에 curl 이 없어 생략)
+
+  # ── [2단계] 팀원 FastAPI AI 서비스 (이미지 준비되면 주석 해제) ──
+  # fastapi-ai:
+  #   image: ${AI_ECR_IMAGE}
+  #   container_name: fastapi-ai
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8000:8000"
+
+  # ── [2단계] MySQL (RDS 대신 EC2 컨테이너로 쓸 경우) ──
+  # mysql:
+  #   image: mysql:8.0
+  #   container_name: mysql
+  #   restart: unless-stopped
+  #   environment:
+  #     - MYSQL_DATABASE=basecamp
+  #     - MYSQL_USER=basecamp
+  #     - MYSQL_PASSWORD=${DB_PASSWORD}
+  #     - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+  #   volumes:
+  #     - mysql-data:/var/lib/mysql
+
+# volumes:
+#   mysql-data:
