@@ -1,6 +1,7 @@
 package com.example.basecamp_server.domain.report.service;
 
 import com.example.basecamp_server.domain.report.dto.response.ReportResponseDto;
+import com.example.basecamp_server.domain.report.entity.Report;
 import com.example.basecamp_server.domain.report.repository.ReportRepository;
 import com.example.basecamp_server.domain.user.entity.User;
 import com.example.basecamp_server.domain.user.repository.UserRepository;
@@ -29,5 +30,13 @@ public class ReportService {
         return reportRepository.findByUser(user).stream()
                 .map(ReportResponseDto::from)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public ReportResponseDto getReport(Long reportId) {
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 제보입니다. ID: " + reportId));
+
+        return ReportResponseDto.from(report);
     }
 }
