@@ -22,27 +22,39 @@ public class ReportResponseDto {
     private String status;
     private String urgency;
     private String solution;
-    private List<String> recommendations;
+
+    // 💡 문자열 목록 대신 장소 객체 DTO 목록으로 변경
+    private List<RecommendationDto> recommendations;
     private List<String> sources;
     private LocalDateTime created_at;
 
-    // 💡 아래 from 메서드 부분을 그대로 덮어씌워주시면 됩니다!
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class RecommendationDto {
+        private String name;
+        private String category;
+        private Double lat;
+        private Double lng;
+        private String address;
+        private String source_url;
+    }
+
     public static ReportResponseDto from(Report report) {
         if (report == null) return null;
 
-        // solution(해결책)이 null이거나 비어있으면 빈 배열([]), 있으면 배열 형태로 변환
-        List<String> recommendationList = (report.getSolution() != null && !report.getSolution().isBlank())
-                ? List.of(report.getSolution())
-                : Collections.emptyList();
+        // 💡 AI 연동 전 혹은 좌표/장소 정보가 없을 때는 null 대신 안전하게 빈 배열([]) 반환
+        List<RecommendationDto> recommendationList = Collections.emptyList();
 
         return ReportResponseDto.builder()
                 .report_id(report.getId())
-                .text(report.getContent() != null ? report.getContent() : "") // null 방어
+                .text(report.getContent() != null ? report.getContent() : "")
                 .category(report.getCategory())
-                .status(report.getStatus() != null ? report.getStatus() : "received") // null 방어
+                .status(report.getStatus() != null ? report.getStatus() : "received")
                 .urgency(report.getUrgency())
                 .solution(report.getSolution())
-                .recommendations(recommendationList)
+                .recommendations(recommendationList) // 빈 배열([])로 전달하여 프론트 UI 파싱 에러 방지
                 .sources(Collections.emptyList())
                 .created_at(report.getCreatedAt())
                 .build();
