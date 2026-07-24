@@ -3,9 +3,9 @@ package com.example.basecamp_server.global.security;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -18,28 +18,24 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
-    private final CustomOAuth2UserService customOAuth2UserService;
-    private final OAuth2SuccessHandler oAuth2SuccessHandler;
-    private final OAuth2FailureHandler oAuth2FailureHandler;
-
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 // 1. CORS 설정 적용
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable)
 
-                // 구글 로그인 처리 (/oauth2/authorization/google 시작 -> 콜백 -> 세션 발급)
-                .oauth2Login(oauth2 -> oauth2
-                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
-                        .successHandler(oAuth2SuccessHandler)
-                        .failureHandler(oAuth2FailureHandler)
+                // 2. REST API 환경이므로 CSRF disable
+                .csrf(csrf -> csrf.disable())
+
+                // 3. URL별 접근 권한 설정
+                .authorizeHttpRequests(auth -> auth
+                        // OAuth2 인증 관련 엔드포인트 및 전체 API 열어두기
+                        .requestMatchers("/api/v1/**", "/oauth2/**", "/login/**", "/error").permitAll()
+                        .anyRequest().authenticated()
                 )
 
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/api/v1/**", "/oauth2/**", "/login/**").permitAll()
-                        .anyRequest().authenticated()
-                );
+                // 4. 💡 구글 OAuth2 로그인 기능 복구!
+                .oauth2Login(Customizer.withDefaults());
 
         return http.build();
     }
@@ -48,13 +44,12 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 💡 프론트엔드 출처(Origin)에 Vercel 배포 주소 추가!
+        // 프론트엔드 출처(Origin) 허용
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
                 "http://192.168.*.*:[*]",
-                "https://basecampclient.vercel.app",  // 👈 추가 (Vercel 배포 도메인)
-                "https://*.vercel.app"                // 👈 (선택) Preview 배포 주소들까지 대응할 경우
+                "https://basecampclient.vercel.app" // Vercel 도메인 (끝에 / 제외)
         ));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
