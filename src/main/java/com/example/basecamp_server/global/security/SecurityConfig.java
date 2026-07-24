@@ -3,10 +3,10 @@ package com.example.basecamp_server.global.security;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -29,27 +29,44 @@ public class SecurityConfig {
 
                 // 3. URL별 접근 권한 설정
                 .authorizeHttpRequests(auth -> auth
-                        // OAuth2 인증 관련 엔드포인트 및 전체 API 열어두기
                         .requestMatchers("/api/v1/**", "/oauth2/**", "/login/**", "/error").permitAll()
                         .anyRequest().authenticated()
                 )
 
-                // 4. 💡 구글 OAuth2 로그인 기능 복구!
-                .oauth2Login(Customizer.withDefaults());
+                // 4. 💡 구글 OAuth2 로그인 성공 후 리다이렉트 처리
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(customAuthenticationSuccessHandler())
+                );
 
         return http.build();
+    }
+
+    // 💡 동적 로그인 성공 핸들러
+    @Bean
+    public AuthenticationSuccessHandler customAuthenticationSuccessHandler() {
+        return (request, response, authentication) -> {
+            // 요청을 보낸 프론트엔드의 Referer 또는 Origin 확인
+            String referer = request.getHeader("Referer");
+            String targetUrl = "https://basecampclient.vercel.app/callback"; // 기본 배포 URL
+
+            // 로컬(localhost:3000)에서 들어온 요청이라면 로컬 callback으로 전송
+            if (referer != null && referer.contains("localhost:3000")) {
+                targetUrl = "http://localhost:3000/callback";
+            }
+
+            response.sendRedirect(targetUrl);
+        };
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 프론트엔드 출처(Origin) 허용
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
                 "http://192.168.*.*:[*]",
-                "https://basecampclient.vercel.app" // Vercel 도메인 (끝에 / 제외)
+                "https://basecampclient.vercel.app"
         ));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
