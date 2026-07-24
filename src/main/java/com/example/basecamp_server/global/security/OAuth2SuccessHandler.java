@@ -23,10 +23,10 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         // 2. 기본값은 Vercel 배포 주소로 설정
         String frontendBaseUrl = "https://basecampclient.vercel.app";
 
-        // 3. 로컬 요청인 경우 로컬 주소로 변경
-        if ((referer != null && referer.contains("localhost")) || (origin != null && origin.contains("localhost"))) {
-            frontendBaseUrl = "http://localhost:3000";
-        }
+//        // 3. 로컬 요청인 경우 로컬 주소로 변경
+//        if ((referer != null && referer.contains("localhost")) || (origin != null && origin.contains("localhost"))) {
+//            frontendBaseUrl = "http://localhost:3000";
+//        }
 
         // 4. 최종 targetUrl 생성 (/callback?status=success)
         String targetUrl = UriComponentsBuilder.fromUriString(frontendBaseUrl + "/callback")
