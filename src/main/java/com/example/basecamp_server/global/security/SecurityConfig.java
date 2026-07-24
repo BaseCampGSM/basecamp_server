@@ -21,19 +21,19 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // 1. CORS 설정 적용
+                // 1. CORS 적용
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // 2. REST API 환경이므로 CSRF disable
+                // 2. REST API이므로 CSRF 비활성화
                 .csrf(csrf -> csrf.disable())
 
-                // 3. URL별 접근 권한 설정
+                // 3. API 접근 권한 설정
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/**", "/oauth2/**", "/login/**", "/error").permitAll()
                         .anyRequest().authenticated()
                 )
 
-                // 4. 💡 구글 OAuth2 로그인 성공 후 리다이렉트 처리
+                // 4. 로그인 성공 시 Vercel 콜백 주소로 리다이렉트
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(customAuthenticationSuccessHandler())
                 );
@@ -41,23 +41,16 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // 💡 동적 로그인 성공 핸들러
+    // 💡 [요구사항 2] 로그인 성공 시 백엔드가 프론트엔드로 돌려보내는 주소 고정
     @Bean
     public AuthenticationSuccessHandler customAuthenticationSuccessHandler() {
         return (request, response, authentication) -> {
-            // 요청을 보낸 프론트엔드의 Referer 또는 Origin 확인
-            String referer = request.getHeader("Referer");
-            String targetUrl = "https://basecampclient.vercel.app/callback"; // 기본 배포 URL
-
-            // 로컬(localhost:3000)에서 들어온 요청이라면 로컬 callback으로 전송
-            if (referer != null && referer.contains("localhost:3000")) {
-                targetUrl = "http://localhost:3000/callback";
-            }
-
+            String targetUrl = "https://basecampclient.vercel.app/callback";
             response.sendRedirect(targetUrl);
         };
     }
 
+    // 💡 [요구사항 1] CORS 설정 (Vercel Origin 허용)
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -66,7 +59,8 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
                 "http://192.168.*.*:[*]",
-                "https://basecampclient.vercel.app"
+                "https://basecampclient.vercel.app",   // 슬래시 없음
+                "https://basecampclient.vercel.app/"   // 슬래시 있음 (curl 테스트 대응)
         ));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));

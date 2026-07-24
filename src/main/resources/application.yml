@@ -1,17 +1,14 @@
 server:
   port: 4000
   address: 0.0.0.0
-  # Caddy(리버스 프록시) 뒤에서 실행되므로, X-Forwarded-* 헤더를 신뢰해
-  # OAuth 리다이렉트 주소({baseUrl})가 http 가 아니라 https 로 생성되도록 한다.
   forward-headers-strategy: framework
 
-  # 💡 [추가] Cross-Site(Vercel -> 백엔드) 간 세션 쿠키 전송을 위한 설정
   servlet:
     session:
       timeout: 30m
       cookie:
-        same-site: none  # Cross-Site 쿠키 허용
-        secure: true     # HTTPS 환경에서 SameSite=None 적용 필수
+        same-site: none
+        secure: true
 
 spring:
   datasource:
