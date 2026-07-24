@@ -1,22 +1,25 @@
 package com.example.basecamp_server.global.security.dto;
 
+import com.example.basecamp_server.domain.user.entity.Role;
 import com.example.basecamp_server.domain.user.entity.User;
 import lombok.Getter;
 
 import java.io.Serializable;
 
-@Getter // 💡 getId() 메서드를 자동으로 생성해 줍니다.
+@Getter
 public class SessionUser implements Serializable {
 
-    private Long id; // 💡 id 필드가 필수입니다.
-    private String name;
-    private String email;
-    private String picture;
+    private final Long id; // 👈 id 필드 추가
+    private final String name;
+    private final String email;
+    private final String picture;
+    private final Role role;
 
     public SessionUser(User user) {
-        this.id = user.getId(); // 💡 User entity에서 id 할당
+        this.id = user.getId(); // 👈 user 엔티티에서 id 가져오기
         this.name = user.getName();
         this.email = user.getEmail();
         this.picture = user.getPicture();
+        this.role = user.getRole();
     }
 }

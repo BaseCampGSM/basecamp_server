@@ -2,7 +2,7 @@ package com.example.basecamp_server.domain.user.controller;
 
 import com.example.basecamp_server.domain.user.dto.UserResponseDto;
 import com.example.basecamp_server.global.security.annotation.LoginUser;
-import com.example.basecamp_server.global.security.dto.SessionUser;
+import com.example.basecamp_server.global.security.dto.SessionUser; // global 패키지로 변경
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

@@ -5,15 +5,17 @@ import lombok.Getter;
 
 @Getter
 public class UserResponseDto {
+    private final Long id;
     private final String name;
     private final String email;
     private final String picture;
     private final String role;
 
     public UserResponseDto(SessionUser sessionUser) {
+        this.id = sessionUser.getId();
         this.name = sessionUser.getName();
         this.email = sessionUser.getEmail();
         this.picture = sessionUser.getPicture();
-        this.role = sessionUser.getRole();
+        this.role = sessionUser.getRole() != null ? sessionUser.getRole().getKey() : null;
     }
 }
