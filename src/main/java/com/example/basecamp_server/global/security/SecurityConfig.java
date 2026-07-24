@@ -55,12 +55,12 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // setAllowedOriginPatterns 사용시 문자열 및 와일드카드 지원
+        // 💡 트레일링 슬래시(/) 제거 및 %2A -> * 와일드카드 수정
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
                 "http://192.168.*.*:[*]",
-                "https://basecampclient.vercel.app", // 👈 끝에 슬래시(/)가 없는지 꼭 확인!
+                "https://basecampclient.vercel.app",
                 "https://*.vercel.app"
         ));
 
