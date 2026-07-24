@@ -1,37 +1,33 @@
 package com.example.basecamp_server.domain.report.dto.response;
 
 import com.example.basecamp_server.domain.report.entity.Report;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ReportResponseDto {
 
-    @JsonProperty("report_id")
-    private final String reportId;
+    private Long report_id;
+    private String text;
+    private String category;
+    private String status;
+    private LocalDateTime created_at;
 
-    private final String text;
-    private final String category;
-    private final String urgency;
-    private final String solution;
-    private final String status;
-    private final List<Object> sources;
-
-    @JsonProperty("created_at")
-    private final LocalDateTime createdAt;
-
-    public ReportResponseDto(Report report) {
-        this.reportId = String.valueOf(report.getId());
-        this.text = report.getContent();
-        this.category = report.getCategory();
-        this.urgency = report.getUrgency();
-        this.solution = report.getSolution();
-        this.status = report.getStatus() != null ? report.getStatus() : "received";
-        this.sources = new ArrayList<>();
-        this.createdAt = report.getCreatedAt();
+    // 💡 정적 팩토리 메서드 from() 추가
+    public static ReportResponseDto from(Report report) {
+        return ReportResponseDto.builder()
+                .report_id(report.getId())
+                .text(report.getContent()) // 👈 getText() 대신 getContent() 사용
+                .category(report.getCategory())
+                .status(report.getStatus())
+                .created_at(report.getCreatedAt())
+                .build();
     }
 }

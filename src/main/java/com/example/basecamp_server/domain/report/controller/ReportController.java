@@ -1,44 +1,36 @@
 package com.example.basecamp_server.domain.report.controller;
 
-import com.example.basecamp_server.domain.report.dto.request.ReportCreateRequestDto;
 import com.example.basecamp_server.domain.report.dto.response.ReportResponseDto;
 import com.example.basecamp_server.domain.report.service.ReportService;
+import com.example.basecamp_server.global.security.dto.SessionUser; // 세션 사용 시
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
-@RequiredArgsConstructor
-@RequestMapping("/api/v1")
 @RestController
+@RequestMapping("/api/v1/reports")
+@RequiredArgsConstructor
 public class ReportController {
 
     private final ReportService reportService;
+    private final HttpSession httpSession; // 💡 세션 로그인 기준
 
-    /** 3-2. 제보 등록 POST /api/v1/reports */
-    @PostMapping("/reports")
-    public ResponseEntity<ReportResponseDto> createReport(@RequestBody ReportCreateRequestDto requestDto) {
-        return ResponseEntity.ok(reportService.createReport(requestDto));
-    }
+    @GetMapping
+    public ResponseEntity<List<ReportResponseDto>> getMyReports() {
+        // 1. 세션에서 현재 로그인된 유저 가져오기
+        SessionUser user = (SessionUser) httpSession.getAttribute("user");
 
-    /** 3-2. 제보 상세 조회 GET /api/v1/reports/{reportId} */
-    @GetMapping("/reports/{reportId}")
-    public ResponseEntity<ReportResponseDto> getReport(@PathVariable Long reportId) {
-        return ResponseEntity.ok(reportService.getReport(reportId));
-    }
+        if (user == null) {
+            return ResponseEntity.status(401).build(); // 미인증 시 401 UnAuthorized
+        }
 
-    /** 3-2. 제보 목록 조회 GET /api/v1/reports */
-    @GetMapping("/reports")
-    public ResponseEntity<List<ReportResponseDto>> getAllReports() {
-        return ResponseEntity.ok(reportService.getAllReports());
-    }
-
-    /** 3-3. AI 분석 요청 POST /api/v1/analyze */
-    @PostMapping("/analyze")
-    public ResponseEntity<ReportResponseDto> analyzeReport(@RequestBody Map<String, String> request) {
-        Long reportId = Long.parseLong(request.get("report_id"));
-        return ResponseEntity.ok(reportService.analyzeReport(reportId));
+        // 2. 로그인된 유저의 제보만 가져와서 반환
+        List<ReportResponseDto> reports = reportService.getMyReports(user.getId());
+        return ResponseEntity.ok(reports);
     }
 }
