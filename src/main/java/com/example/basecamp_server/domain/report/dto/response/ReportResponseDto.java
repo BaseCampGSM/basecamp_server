@@ -20,20 +20,30 @@ public class ReportResponseDto {
     private String text;
     private String category;
     private String status;
-    private String urgency;             // 💡 추가
-    private String solution;            // 💡 추가
-    private List<String> sources;       // 💡 추가
+    private String urgency;
+    private String solution;
+    private List<String> recommendations;
+    private List<String> sources;
     private LocalDateTime created_at;
 
+    // 💡 아래 from 메서드 부분을 그대로 덮어씌워주시면 됩니다!
     public static ReportResponseDto from(Report report) {
+        if (report == null) return null;
+
+        // solution(해결책)이 null이거나 비어있으면 빈 배열([]), 있으면 배열 형태로 변환
+        List<String> recommendationList = (report.getSolution() != null && !report.getSolution().isBlank())
+                ? List.of(report.getSolution())
+                : Collections.emptyList();
+
         return ReportResponseDto.builder()
                 .report_id(report.getId())
-                .text(report.getContent())
+                .text(report.getContent() != null ? report.getContent() : "") // null 방어
                 .category(report.getCategory())
-                .status(report.getStatus())
+                .status(report.getStatus() != null ? report.getStatus() : "received") // null 방어
                 .urgency(report.getUrgency())
                 .solution(report.getSolution())
-                .sources(Collections.emptyList()) // 엔티티에 sources가 따로 없다면 빈 배열 반환하여 프론트 404/Crash 방지
+                .recommendations(recommendationList)
+                .sources(Collections.emptyList())
                 .created_at(report.getCreatedAt())
                 .build();
     }
