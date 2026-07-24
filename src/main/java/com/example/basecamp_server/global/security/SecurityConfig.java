@@ -44,28 +44,22 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // 2. Security 전용 CORS 상세 설정
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 프론트엔드 출처(Origin) 허용
+        // 💡 프론트엔드 출처(Origin)에 Vercel 배포 주소 추가!
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
-                "http://192.168.*.*:[*]" // 로컬 같은 Wi-Fi 대역대 허용
+                "http://192.168.*.*:[*]",
+                "https://basecampclient.vercel.app",  // 👈 추가 (Vercel 배포 도메인)
+                "https://*.vercel.app"                // 👈 (선택) Preview 배포 주소들까지 대응할 경우
         ));
 
-        // 허용할 HTTP 메서드
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-
-        // 허용할 헤더
         configuration.setAllowedHeaders(List.of("*"));
-
-        // 쿠키/세션 인증정보 허용 (withCredentials 필수)
         configuration.setAllowCredentials(true);
-
-        // 클라이언트가 응답 헤더를 읽을 수 있도록 허용
         configuration.setExposedHeaders(List.of("Set-Cookie", "Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
