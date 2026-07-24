@@ -25,6 +25,26 @@ services:
       # 앱 쪽 application.yml 이 server.port 를 임의로 바꿔도(현재 4000 하드코딩)
       # 배포 포트는 항상 8080 으로 고정한다. 환경변수가 yml 값보다 우선순위가 높음.
       - SERVER_PORT=8080
+    # 로그가 무한정 쌓여 디스크를 채우지 않도록 최대 10MB×3개로 제한(자동 순환)
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # AI 서버(FastAPI + AWS Bedrock). 외부 포트 없음 → Caddy 를 통해서만 접근(/api/ai/*).
+  # AWS Bedrock 키(AWS_REGION/ACCESS_KEY/SECRET/BEDROCK_LLM_MODEL_ID)는 .env 로 주입.
+  fastapi-ai:
+    image: ${AI_APP_IMAGE:-ghcr.io/basecampgsm/basecamp_server-ai:latest}
+    container_name: fastapi-ai
+    restart: unless-stopped
+    env_file:
+      - .env
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   caddy:
     image: caddy:2
@@ -32,6 +52,7 @@ services:
     restart: unless-stopped
     depends_on:
       - basecamp-server
+      - fastapi-ai
     ports:
       - "80:80"
       - "443:443"
@@ -39,6 +60,11 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data      # 발급받은 인증서 보관(재배포 시 재발급 방지)
       - caddy_config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   caddy_data:
