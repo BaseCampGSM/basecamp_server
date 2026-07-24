@@ -20,29 +20,22 @@ public class ReportService {
     private final UserRepository userRepository;
 
     /**
-     * 1. 제보 접수 (생성/저장)
+     * 제보 접수 (생성)
      */
     @Transactional
-    public Long createReport(Long userId, ReportCreateRequestDto requestDto) {
-        if (!userRepository.existsById(userId)) {
-            throw new IllegalArgumentException("존재하지 않는 유저입니다. ID: " + userId);
-        }
-
-        // Report 엔티티의 @Builder 매개변수 이름과 매핑
+    public Long createReport(Long userId, ReportCreateRequestDto dto) {
         Report report = Report.builder()
-                .content(requestDto.getText())      // text -> content
-                .address(requestDto.getAddress())   // address -> address
-                .latitude(requestDto.getLat())     // lat -> latitude
-                .longitude(requestDto.getLng())    // lng -> longitude
+                .content(dto.getText())
+                .address(dto.getAddress())
+                .latitude(dto.getLat())
+                .longitude(dto.getLng())
                 .userId(userId)
                 .build();
-
-        Report savedReport = reportRepository.save(report);
-        return savedReport.getId();
+        return reportRepository.save(report).getId();
     }
 
     /**
-     * 2. 💡 로그인한 유저의 제보 목록만 조회
+     * 내 제보 목록 조회
      */
     @Transactional(readOnly = true)
     public List<ReportResponseDto> getMyReports(Long userId) {
@@ -56,7 +49,7 @@ public class ReportService {
     }
 
     /**
-     * 3. 제보 단건 상세 조회
+     * 제보 단건 상세 조회
      */
     @Transactional(readOnly = true)
     public ReportResponseDto getReport(Long reportId) {
