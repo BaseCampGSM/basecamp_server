@@ -68,14 +68,14 @@ jobs:
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-      # compose 파일을 EC2 로 복사 (최신 정의 반영)
-      - name: Copy docker-compose.yml to EC2
+      # compose + Caddy 설정을 EC2 로 복사 (최신 정의 반영)
+      - name: Copy compose & Caddyfile to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: docker-compose.yml
+          source: "docker-compose.yml,Caddyfile"
           target: /home/${{ secrets.EC2_USER }}/basecamp
 
       # EC2 에서 GHCR 로그인(임시 GITHUB_TOKEN) 후 최신 이미지로 재기동
