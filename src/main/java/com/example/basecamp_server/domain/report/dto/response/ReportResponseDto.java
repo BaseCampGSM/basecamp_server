@@ -22,12 +22,13 @@ public class ReportResponseDto {
     private String status;
     private String urgency;
     private String solution;
-
-    // 💡 문자열 목록 대신 장소 객체 DTO 목록으로 변경
     private List<RecommendationDto> recommendations;
-    private List<String> sources;
+    private List<SourceDto> sources; // 💡 단순 문자열 목록 -> 객체 배열로 변경
     private LocalDateTime created_at;
 
+    /**
+     * 추천 시설/정책 DTO
+     */
     @Getter
     @Builder
     @NoArgsConstructor
@@ -41,11 +42,22 @@ public class ReportResponseDto {
         private String source_url;
     }
 
+    /**
+     * 💡 출처 정보 DTO (title, org, url, updated_at)
+     */
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SourceDto {
+        private String title;
+        private String org;
+        private String url;
+        private String updated_at; // ISO 8601 포맷 문자열
+    }
+
     public static ReportResponseDto from(Report report) {
         if (report == null) return null;
-
-        // 💡 AI 연동 전 혹은 좌표/장소 정보가 없을 때는 null 대신 안전하게 빈 배열([]) 반환
-        List<RecommendationDto> recommendationList = Collections.emptyList();
 
         return ReportResponseDto.builder()
                 .report_id(report.getId())
@@ -54,8 +66,8 @@ public class ReportResponseDto {
                 .status(report.getStatus() != null ? report.getStatus() : "received")
                 .urgency(report.getUrgency())
                 .solution(report.getSolution())
-                .recommendations(recommendationList) // 빈 배열([])로 전달하여 프론트 UI 파싱 에러 방지
-                .sources(Collections.emptyList())
+                .recommendations(Collections.emptyList()) // 추천 데이터 없을 시 []
+                .sources(Collections.emptyList())         // 출처 데이터 없을 시 []
                 .created_at(report.getCreatedAt())
                 .build();
     }
