@@ -15,8 +15,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
-        // Next.js 기본 포트인 3000으로 수정
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:3000/callback")
+        // 💡 Vercel 배포 주소로 변경
+        String targetUrl = UriComponentsBuilder.fromUriString("https://basecampclient.vercel.app/callback")
                 .queryParam("status", "success")
                 .build().toUriString();
 
