@@ -35,7 +35,7 @@ spring:
             scope:
               - profile
               - email
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            redirect-uri: "https://basecampclient.vercel.app/auth/callback/google"
 
 api:
   anthropic:
