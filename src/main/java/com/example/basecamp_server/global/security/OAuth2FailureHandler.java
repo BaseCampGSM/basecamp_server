@@ -15,7 +15,8 @@ public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler 
 
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:3000/callback")
+        // Vercel 주소로 변경
+        String targetUrl = UriComponentsBuilder.fromUriString("https://basecampclient.vercel.app/callback")
                 .queryParam("status", "error")
                 .queryParam("message", exception.getLocalizedMessage())
                 .build().toUriString();
